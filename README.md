@@ -1,2 +1,1 @@
-# SSOO2-SistemaVentaCine
-Práctica 3 de la asignatura SSOO II
+## Práctica 3 - Sistema de venta online en cines
