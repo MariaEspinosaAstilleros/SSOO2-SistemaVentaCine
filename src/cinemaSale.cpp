@@ -10,3 +10,12 @@
  * Purpose:         
  * 
  ******************************************************/
+
+#include <iostream>
+#include <queue>
+#include <vector>
+#include <mutex> 
+#include <condition_variable> 
+
+#include "../include/color.h"
+#include "../include/msgRequest.h"
