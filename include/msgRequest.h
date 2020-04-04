@@ -28,7 +28,7 @@ class MsgRequestTickets{
         int     num_seats;
         bool    suff_seats;
 
-        MsgRequestTickets(int id_client, int num_seats, bool suff_seats);
+        MsgRequestTickets(int id, int ns);
 };
 
 
@@ -48,7 +48,7 @@ class MsgRequestSalePoint{
         int     id_sale_point; 
         bool    attended; 
 
-        MsgRequestSalePoint(int id_client, int num_drinks, int num_popcorns, int id_sale_point, bool attended); 
+        MsgRequestSalePoint(int id, int nd, int np, int id_sp); 
 };
 
 
@@ -63,7 +63,7 @@ class MsgRequestPay{
     public:
         int id_client; 
 
-        MsgRequestPay(int id_client); 
+        MsgRequestPay(int id); 
 };
 
 
@@ -81,5 +81,5 @@ class MsgRequestStock{
         int     id_sale_point; 
         bool    attended;
         
-        MsgRequestStock(int num_drinks, int num_popcorns, int id_sale_point, bool attended);    
+        MsgRequestStock(int nd, int np, int id_sp);    
 };

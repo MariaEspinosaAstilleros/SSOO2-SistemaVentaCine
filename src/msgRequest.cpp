@@ -15,31 +15,19 @@
 #include "../include/msgRequest.h"
 
 /*Constructor of class of requests to tickets*/
-MsgRequestTickets::MsgRequestTickets(int id_client, int num_seats, bool suff_seats){
-    this -> id_client  = id_client; 
-    this -> num_seats  = num_seats; 
+MsgRequestTickets::MsgRequestTickets(int id, int ns): id_client(id), num_seats(ns){
     this -> suff_seats = false; 
-
 } 
 
 /*Constructor of class of requests to sale point*/
-MsgRequestSalePoint::MsgRequestSalePoint(int id_client, int num_drinks, int num_popcorns, int id_sale_point, bool attended){
-    this -> id_client       = id_client;
-    this -> num_drinks      = num_drinks;
-    this -> num_popcorns    = num_popcorns; 
-    this -> id_sale_point   = id_sale_point;
-    this -> attended        = false;  
+MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_client(id), num_drinks(nd), num_popcorns(np), id_sale_point(id_sp){
+    this -> attended = false;  
 }
 
 /*Constructor of class of requests to pay*/
-MsgRequestPay::MsgRequestPay(int id_client){
-    this -> id_client = id_client; 
-}
+MsgRequestPay::MsgRequestPay(int id): id_client(id){};  
 
 /*Constructor of class of requests to thread stocker*/
-MsgRequestStock::MsgRequestStock(int num_drinks, int num_popcorns, int id_sale_point, bool attended){
-    this -> num_drinks      = num_drinks;
-    this -> num_popcorns    = num_popcorns; 
-    this -> id_sale_point   = id_sale_point;
-    this -> attended        = false;
+MsgRequestStock::MsgRequestStock(int nd, int np, int id_sp):num_drinks(nd), num_popcorns(np), id_sale_point(id_sp){
+    this -> attended = false;
 }
