@@ -20,7 +20,7 @@ MsgRequestTickets::MsgRequestTickets(int id, int ns): id_client(id), num_seats(n
 } 
 
 /*Constructor of class of requests to sale point*/
-MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_client(id), num_drinks(nd), num_popcorns(np), id_sale_point(id_sp){
+MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_client(id), num_drinks(nd), num_popcorn(np), id_sale_point(id_sp){
     this -> attended = false;  
 }
 
@@ -28,6 +28,6 @@ MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_
 MsgRequestPay::MsgRequestPay(int id): id_client(id){};  
 
 /*Constructor of class of requests to thread stocker*/
-MsgRequestStock::MsgRequestStock(int nd, int np, int id_sp):num_drinks(nd), num_popcorns(np), id_sale_point(id_sp){
+MsgRequestStock::MsgRequestStock(int nd, int np, int id_sp):num_drinks(nd), num_popcorn(np), id_sale_point(id_sp){
     this -> attended = false;
 }
