@@ -37,7 +37,7 @@ class MsgRequestTickets{
  * Date created:     3/4/2020
  * Input arguments: 
  * Purpose:          Class of requests to sale point
- *                   The client indicates number of drinks and popcorns that wants.  
+ *                   The client indicates number of drinks and popcorn that wants.  
  * 
  ******************************************************/
 class MsgRequestSalePoint{
