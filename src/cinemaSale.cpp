@@ -90,10 +90,10 @@ int generateRandomNumber(int lim){
 }
 
 /******************************************************
- * Function name:    generateRandomNumber
- * Date created:     4/4/2020
+ * Function name:    messageWelcome
+ * Date created:     12/4/2020
  * Input arguments: 
- * Purpose:          Generate a random number 
+ * Purpose:          Show a message welcome
  * 
  ******************************************************/
 void messageWelcome(){
@@ -186,7 +186,7 @@ void stateClientTickets(int id_client, MsgRequestTickets mrt){
 }
 
 /******************************************************
- * Function name:    ticketOffice()
+ * Function name:    ticketOffice
  * Date created:     12/4/2020
  * Input arguments:  
  * Purpose:          If simulate the ticket office  
