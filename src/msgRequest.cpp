@@ -31,3 +31,4 @@ MsgRequestPay::MsgRequestPay(int id): id_client(id){};
 MsgRequestStock::MsgRequestStock(int nd, int np, int id_sp):num_drinks(nd), num_popcorn(np), id_sale_point(id_sp){
     this -> attended = false;
 }
+

@@ -11,3 +11,4 @@
 #define BOLDYELLOW  "\033[1m\033[33m"      /* Bold Yellow */
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */ 
 #define BOLDBLUE    "\033[1m\033[34m"      /*Bold blue*/
+#define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */

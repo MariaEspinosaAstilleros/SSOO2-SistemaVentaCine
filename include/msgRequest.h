@@ -44,7 +44,7 @@ class MsgRequestSalePoint{
     public:
         int     id_client;
         int     num_drinks;
-        int     num_popcorns;
+        int     num_popcorn;
         int     id_sale_point; 
         bool    attended; 
 
@@ -77,7 +77,7 @@ class MsgRequestPay{
 class MsgRequestStock{
     public:
         int     num_drinks;
-        int     num_popcorns;
+        int     num_popcorn;
         int     id_sale_point; 
         bool    attended;
         
