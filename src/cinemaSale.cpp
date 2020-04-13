@@ -32,9 +32,11 @@
 #define NUM_SP      3
 #define NUM_CLIENTS 20
 #define MAX_REQUEST 5
+#define PAY_TO      1 /*pagamos a la taquilla*/
+#define PAY_SP      2 /*pagamos al punto de venta*/
 
 /*Globals variables*/
-int turn = 3; 
+int turn = -1; 
 
 /*Messages queue*/
 std::queue<std::thread>                 g_queue_tickets;            /*queue of clients to buy tickets*/
@@ -76,6 +78,7 @@ void                 client(int id_client);
 void                 stateClientTickets(int id_client, MsgRequestTickets mrt);
 void                 salePoint(int id_sale_point);
 void                 buyDrinksPopcorn(int id_client);
+void                 paySystem(); 
 MsgRequestTickets    buyTickets(int id_client);
 
 /******************************************************
@@ -150,6 +153,7 @@ MsgRequestTickets buyTickets(int id_client){
     /*Generate the request to buy a tickets*/
     MsgRequestTickets mrt(id_client, generateRandomNumber(MAX_REQUEST));
     g_queue_request_tickets.push(&mrt); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(400)); //duermo al hilo cada vez que compra
 
     /*Unlocked the ticket office and wait to receive tickets*/
     g_sem_toffice.unlock(); 
@@ -177,7 +181,7 @@ void stateClientTickets(int id_client, MsgRequestTickets mrt){
 
         /*Aquí va el metodo donde compro las bebidas y las palomitas*/
         buyDrinksPopcorn(id_client); 
-        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have everything already. I go to see Harry Potter now :)" << RESET << std::endl;
+        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have everything already. I go to see Harry Potter now! :)" << RESET << std::endl;
     }else{
         g_queue_clients_out.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop();
@@ -192,9 +196,22 @@ void stateClientTickets(int id_client, MsgRequestTickets mrt){
  * Purpose:          If simulate the ticket office  
  * 
  ******************************************************/
- void ticketOffice(){
+void ticketOffice(){
 
- }
+    std::cout << GREEN << "[TICKET OFFICE] Ticket office open" << RESET << std::endl; 
+
+    while(true){
+        g_sem_toffice.lock(); 
+        MsgRequestTickets *mrt = g_queue_request_tickets.front();
+        g_queue_request_tickets.pop(); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
+
+        /*Asignamos los asientos y cobramos las entradas de forma simultanea*/
+
+
+    }
+
+}
 
 /******************************************************
  * Function name:    createSalePoints
@@ -234,6 +251,22 @@ void buyDrinksPopcorn(int id_client){
 }
 
 /******************************************************
+ * Function name:    paySystem(); 
+ * Date created:     13/4/2020
+ * Input arguments: 
+ * Purpose:          It simulate the pay system
+ * 
+ ******************************************************/
+void paySystem(){
+    std::cout << BLUE << "[PAY SYSTEM] Pay system open" << RESET << std::endl; 
+
+    /*while(true){
+
+    }*/
+
+}
+
+/******************************************************
  * Function name:    signalHandler
  * Date created:     11/4/2020
  * Input arguments: 
@@ -245,6 +278,28 @@ void signalHandler(int signal){
     std::cout << BOLDWHITE << "[HANDLER] It has been received the signal CTRL+C. The program ended...\n" << RESET << std::endl; 
     kill(getpid(), SIGKILL); 
     std::exit(EXIT_SUCCESS); 
+}
+
+/******************************************************
+ * Function name:    manager
+ * Date created:     13/4/2020
+ * Input arguments: 
+ * Purpose:          Generate the turns to the clients access to ticket office 
+ * 
+ ******************************************************/
+void manager(){
+    std::unique_lock<std::mutex> ul(g_sem_toffice); 
+
+    for(int i = 1; i < NUM_CLIENTS; i++){
+        if(i>1){ul.lock();} //bloqueo la taquilla 
+        std::cout << CYAN << "[MANAGER] I'ts the turn of thread " << std::to_string(i) << RESET << std::endl;
+        turn = i; 
+        g_cv_ticket_office.notify_all();  
+        ul.unlock();
+        g_sem_manager.lock(); 
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
+    }
 }
 
 /******************************************************
@@ -261,8 +316,26 @@ int main(int argc, char *argv[]){
     } 
 
     messageWelcome();
-    createClients(); 
 
-    return 0; 
+    /*Bloqueamos todos los semaforos*/
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+
+    /*Creamos los hilos*/
+    //std::thread thread_ticket_office(ticketOffice); 
+    //std::thread thread_pay(paySystem); 
+    //std::thread thread_sale_point(createSalePoint);
+    //std::thread thread_clients(createClients); 
+    //std::thread thread_manager(manager); 
+
+    /*Espero que finalicen los hilos*/
+
+    ticketOffice();
+    paySystem(); 
+    createClients();
+    manager(); 
+    
+
+    return EXIT_SUCCESS; 
 
 }

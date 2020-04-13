@@ -61,9 +61,10 @@ class MsgRequestSalePoint{
  ******************************************************/
 class MsgRequestPay{
     public:
-        int id_client; 
+        int id_client;
+        int id_pay; 
 
-        MsgRequestPay(int id); 
+        MsgRequestPay(int id, int idp); 
 };
 
 
