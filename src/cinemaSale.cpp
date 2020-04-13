@@ -273,8 +273,7 @@ void paySystem(){
 
     while(true){
         g_sem_pay.lock();
-
-        MsgRequestPay *mrp = g_queue_request_pay.top(); 
+        MsgRequestPay *mrp = g_queue_request_pay.top();  //AQUI PETA EL SEGMENTATION FAULT
         g_queue_request_pay.pop(); 
 
         switch(mrp->id_pay){
