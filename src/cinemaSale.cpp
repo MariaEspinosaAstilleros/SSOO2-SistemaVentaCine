@@ -59,6 +59,8 @@ std::mutex                              g_sem_seats;                /*sem to con
 std::mutex                              g_sem_manager;              /*sem to manager send a new turn*/
 std::mutex                              g_sem_turn;                 /*sem to control the turn*/
 std::mutex                              g_sem_pay;                  /*sem to control pay*/
+std::mutex                              g_sem_mutex_pay;            /*sem to control the critical section in pay*/
+std::mutex                              g_sem_wait_pay;             /*sem to control pay confirmation*/
 
 /*Condition variable*/
 std::condition_variable                 g_cv_ticket_office;         /*condition variable to notify the turn of ticket office*/
@@ -159,6 +161,15 @@ MsgRequestTickets buyTickets(int id_client){
     g_sem_toffice.unlock(); 
     g_sem_tickets.lock(); 
 
+    if(mrt.suff_seats){
+        MsgRequestPay mrp(id_client, PAY_TO);
+        g_queue_request_pay.push(&mrp);
+        g_sem_pay.unlock(); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
+    }else{
+
+    }
+
     return mrt; 
 }
 
@@ -258,12 +269,25 @@ void buyDrinksPopcorn(int id_client){
  * 
  ******************************************************/
 void paySystem(){
-    std::cout << BLUE << "[PAY SYSTEM] Pay system open" << RESET << std::endl; 
+    std::cout << BLUE << "[PAYMENT SYSTEM] Payment system open" << RESET << std::endl; 
 
-    /*while(true){
+    while(true){
+        g_sem_pay.lock();
 
-    }*/
+        MsgRequestPay *mrp = g_queue_request_pay.top(); 
+        g_queue_request_pay.pop(); 
 
+        switch(mrp->id_pay){
+            case 0:
+                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << "pay tickets" << RESET << std::endl;
+                break; 
+            case 1:
+                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << "pay drinks and popcorn" << RESET << std::endl;
+                break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
+        g_sem_wait_pay.unlock(); 
+    }
 }
 
 /******************************************************
@@ -322,19 +346,13 @@ int main(int argc, char *argv[]){
     std::this_thread::sleep_for(std::chrono::milliseconds(400));
 
     /*Creamos los hilos*/
-    //std::thread thread_ticket_office(ticketOffice); 
-    //std::thread thread_pay(paySystem); 
-    //std::thread thread_sale_point(createSalePoint);
-    //std::thread thread_clients(createClients); 
-    //std::thread thread_manager(manager); 
+    std::thread thread_ticket_office(ticketOffice); 
+    std::thread thread_pay(paySystem); 
+    std::thread thread_sale_point(createSalePoints);
+    std::thread thread_clients(createClients); 
+    std::thread thread_manager(manager); 
 
     /*Espero que finalicen los hilos*/
-
-    ticketOffice();
-    paySystem(); 
-    createClients();
-    manager(); 
-    
 
     return EXIT_SUCCESS; 
 
