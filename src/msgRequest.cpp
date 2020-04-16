@@ -25,7 +25,9 @@ MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_
 }
 
 /*Constructor of class of requests to pay*/
-MsgRequestPay::MsgRequestPay(int id, int idp): id_client(id), id_pay(idp){};  
+MsgRequestPay::MsgRequestPay(int id, int idp): id_client(id), id_pay(idp){
+    this -> attended = false;
+};  
 
 /*Constructor of class of requests to thread stocker*/
 MsgRequestStock::MsgRequestStock(int nd, int np, int id_sp):num_drinks(nd), num_popcorn(np), id_sale_point(id_sp){

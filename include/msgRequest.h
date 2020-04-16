@@ -61,8 +61,9 @@ class MsgRequestSalePoint{
  ******************************************************/
 class MsgRequestPay{
     public:
-        int id_client;
-        int id_pay; 
+        int  id_client;
+        int  id_pay; 
+        bool attended; 
 
         MsgRequestPay(int id, int idp); 
 };
