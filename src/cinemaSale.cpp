@@ -292,7 +292,7 @@ void ticketOffice(){
             g_queue_request_pay.push(&mrp);
 
             /*Wait confirmation of payment system*/
-            std::unique_lock ul_wait_payment(g_sem_wait_pay); 
+            std::unique_lock<std::mutex> ul_wait_payment(g_sem_wait_pay); 
             bool *p_flag_attended = &(mrp.attended);
             g_cv_pay.wait(ul_wait_payment, [p_flag_attended] {return *p_flag_attended;}); 
             ul_wait_payment.unlock();
