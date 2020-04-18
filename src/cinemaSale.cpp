@@ -136,12 +136,12 @@ void messageWelcome(){
 void blockSem(){
     //g_sem_tickets.lock();             
     //g_sem_toffice.lock();              
-    g_sem_seats.lock();                
+    //g_sem_seats.lock();                
     g_sem_manager.lock();              
     g_sem_turn.lock();   
-    g_sem_payment.wait();                         
+    //g_sem_payment.wait();                         
     g_sem_mutex_payment.lock();        
-    g_sem_wait_payment.lock();
+    //g_sem_wait_payment.lock();
 }
 
 /******************************************************
@@ -261,13 +261,12 @@ MsgRequestTickets buyTickets(int id_client){
 void checkTicketsClient(int id_client, MsgRequestTickets mrt){
 
     /*Check it the client has sufficient seats and it can buy drinks and popcorn*/
-
     if(mrt.suff_seats == true){
         /*The client goes inside the cinema*/
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have the tickets already, I go to buy drinks and popcorn..." << RESET << std::endl; 
         g_queue_inside_cinema.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop(); 
-        g_sem_tickets.unlock(); /*Desbloqueo cuando he conseguido los tickets*/
+        g_sem_manager.unlock(); /*Desbloqueo el turno para que el siguiente cliente mande la peticion*/
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
         /*Aquí va el metodo donde compro las bebidas y las palomitas*/
@@ -277,6 +276,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
         g_queue_clients_out.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop();
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] No tickets left so I go to my house :(" << RESET << std::endl;
+        g_sem_manager.unlock(); /*Desbloqueo el turno para que el siguiente cliente mande la peticion*/
     }
 }
 
@@ -293,15 +293,16 @@ void ticketOffice(){
 
     /*Seat allocation and payment system simultaneous*/      
     //CUANDO USO ESTA VAINA¿?¿?¿?¿?
-    //std::unique_lock<std::mutex> ul_ticket_office(g_sem_toffice);
-    //std::unique_lock<std::mutex> ul_payment(g_sem_mutex_payment); 
+    /*std::unique_lock<std::mutex> ul_ticket_office(g_sem_toffice);
+    std::unique_lock<std::mutex> ul_payment(g_sem_mutex_payment); */
 
-    /*Assign payment priority*/
-    g_payment_priority = priorityAssignment(PAY_TO); 
     std::this_thread::sleep_for(std::chrono::milliseconds(820)); 
 
     while(true){
         g_sem_toffice.lock(); 
+
+        /*Assign payment priority*/
+        //g_payment_priority = priorityAssignment(PAY_TO); 
         
         MsgRequestTickets *mrt = g_queue_request_tickets.front(); 
         g_queue_request_tickets.pop(); 
@@ -311,20 +312,24 @@ void ticketOffice(){
             std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
 
             /*Request to payment system*/
-            MsgRequestPay mrp(mrt->id_client, g_payment_priority);
+            //MsgRequestPay mrp(mrt->id_client, g_payment_priority);
+            MsgRequestPay mrp(mrt->id_client, 1);
             g_queue_request_payment.push(&mrp);
 
             /*Wait confirmation of payment system*/
             std::unique_lock<std::mutex> ul_wait_payment(g_sem_wait_payment);
-            g_sem_payment.signal();  
+            g_sem_payment.signal();   
             bool *p_flag_attended = &(mrp.attended);
             g_cv_payment.wait(ul_wait_payment, [p_flag_attended] {return *p_flag_attended;}); 
-            ul_wait_payment.unlock();
 
             /*Check if the payment was successful*/
-            if(mrp.attended){
+            if(mrp.attended == true){
+                std::cout << "HOLAAAA" << std::endl; 
                 /*Updated the number of tickets left*/
+                g_sem_seats.lock(); //Protegemos la resta de los asientos
                 num_seats -= mrt->num_seats; 
+                g_sem_seats.unlock(); 
+
                 mrt->suff_seats = true; 
             }else{
                 std::cout << GREEN << "[TICKET OFFICE] The client " << mrt->id_client << " has requested more tickets than there are left" << RESET << std::endl;
@@ -332,7 +337,7 @@ void ticketOffice(){
             }
 
             std::cout << GREEN << "[TICKET OFFICE] The client " << mrt->id_client << " has been attended" << RESET << std::endl;
-            g_sem_manager.unlock(); /*Cuando he atendido al cliente lo desbloqueo para atender a otro*/
+            g_sem_tickets.unlock(); /*Cuando he atendido al cliente lo desbloqueo para atender a otro*/ 
         }  
     }
 }
@@ -381,22 +386,21 @@ void replenisher(){
  ******************************************************/
 void paymentSystem(){
     std::cout << BLUE << "[PAYMENT SYSTEM] Payment system open" << RESET << std::endl; 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500)); 
 
     while(true){
         g_sem_payment.wait();
-        MsgRequestPay *mrp = g_queue_request_payment.top();  //AQUI PETA EL SEGMENTATION FAULT
+        MsgRequestPay *mrp = g_queue_request_payment.top();  
         g_queue_request_payment.pop(); 
 
         switch(mrp->id_pay){
             case 1:
-                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << "pay tickets" << RESET << std::endl;
+                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << " pay tickets" << RESET << std::endl;
                 break; 
             case 2:
-                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << "pay drinks and popcorn" << RESET << std::endl;
+                std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << " pay drinks and popcorn" << RESET << std::endl;
                 break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
         mrp->attended = true;  
         g_cv_payment.notify_all(); 
     }
@@ -449,10 +453,8 @@ int main(int argc, char *argv[]){
     std::thread thread_manager(manager); 
     std::thread thread_replenisher(replenisher); 
 
-    /*Wait threads end*/ 
-    thread_ticket_office.join(); 
-    //thread_manager.join(); 
-    //thread_payment.join(); 
+    /*Wait threads end*/  
+    thread_payment.join(); 
 
     return EXIT_SUCCESS; 
 }
