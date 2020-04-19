@@ -263,7 +263,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
     /*Check it the client has sufficient seats and it can buy drinks and popcorn*/
     if(mrt.suff_seats == true){
         /*The client goes inside the cinema*/
-        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have the tickets already, I go to buy drinks and popcorn..." << RESET << std::endl; 
+        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have the tickets already. I go to buy drinks and popcorn..." << RESET << std::endl; 
         g_queue_inside_cinema.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop(); 
         g_sem_manager.unlock(); /*Desbloqueo el turno para que el siguiente cliente mande la peticion*/
@@ -325,6 +325,7 @@ void ticketOffice(){
             if(mrp.attended == true){ 
                 /*Updated the number of tickets left*/
                 num_seats -= mrt->num_seats; 
+                std::cout << BOLDWHITE << "QUEDAN " << num_seats << " ENTRADAS" << RESET << std::endl; 
                 mrt->suff_seats = true; 
             }else{
                 std::cout << GREEN << "[TICKET OFFICE] The client " << std::to_string(mrt->id_client) << " has requested more tickets than there are left" << RESET << std::endl;
@@ -381,7 +382,7 @@ void replenisher(){
  ******************************************************/
 void paymentSystem(){
     std::cout << BLUE << "[PAYMENT SYSTEM] Payment system open" << RESET << std::endl; 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1800)); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
 
     while(true){
         g_sem_payment.wait();
