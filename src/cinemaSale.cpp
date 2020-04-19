@@ -322,7 +322,7 @@ void ticketOffice(){
                 /*Updated the number of tickets left*/
                 g_sem_seats.wait(); 
                 num_seats -= mrt->num_seats; 
-                std::cout << GREEN << "[TICKET OFFICE] " << num_seats << " tickets letf" << RESET << std::endl; 
+                std::cout << GREEN << "[TICKET OFFICE] " << num_seats << " tickets left" << RESET << std::endl; 
                 mrt->suff_seats = true; 
             }else{
                 mrt->suff_seats = false; 
