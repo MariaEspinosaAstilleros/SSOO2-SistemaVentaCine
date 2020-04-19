@@ -241,8 +241,8 @@ MsgRequestTickets buyTickets(int id_client){
     /*Generate the request to buy a tickets*/
     MsgRequestTickets mrt(id_client, generateRandomNumber(MAX_REQUEST));
     g_queue_request_tickets.push(&mrt); 
-    std::this_thread::sleep_for(std::chrono::milliseconds(400)); //sleep the thread each time that the client buys tickets
     std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I want " << std::to_string(mrt.num_seats) << " tickets" << RESET << std::endl; 
+    std::this_thread::sleep_for(std::chrono::milliseconds(300)); //sleep the thread each time that the client buys tickets
 
     /*Unlocked the ticket office and wait to receive tickets*/
     g_sem_toffice.unlock(); 
@@ -292,7 +292,7 @@ void ticketOffice(){
     int num_seats = NUM_SEATS; 
 
     std::cout << GREEN << "[TICKET OFFICE] Ticket office open" << RESET << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(800)); 
+    std::this_thread::sleep_for(std::chrono::milliseconds(820)); 
 
     while(true){
         g_sem_toffice.lock(); 
@@ -412,7 +412,7 @@ void paymentSystem(){
 void manager(){
     std::cout << CYAN << "[MANAGER] Manager is ready" << RESET << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     for(int i = 1; i <= NUM_CLIENTS; i++){ 
         std::cout << CYAN << "[MANAGER] It's the turn of client " << std::to_string(i) << RESET << std::endl; 
         turn = i; 
