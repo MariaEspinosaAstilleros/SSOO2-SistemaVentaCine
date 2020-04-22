@@ -99,9 +99,7 @@ void                 manager();
  * Purpose:          Generate a random number 
  * 
  ******************************************************/
-int generateRandomNumber(int lim){
-    return (rand()%(lim-1))+1;
-}
+int generateRandomNumber(int lim){ return (rand()%(lim-1))+1; }
 
 /******************************************************
  * Function name:    signalHandler
@@ -179,8 +177,8 @@ void blockSem(){
  * 
  ******************************************************/
 int priorityAssignment(int type_payment){
-    int priority = 0; 
-    int num_random = generateRandomNumber(100); 
+    int priority     = 0; 
+    int num_random   = generateRandomNumber(100); 
 
     switch (type_payment){
         case PAY_TO:
@@ -288,9 +286,9 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
     if(mrt.suff_seats == true){
         /*The client goes inside the cinema*/
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have the tickets already. I go to buy drinks and popcorn..." << RESET << std::endl; 
-        g_sem_manager.unlock(); /*Desbloqueo el turno para que el siguiente cliente mande la peticion*/
+        g_sem_manager.unlock(); /*It unlocks the shift to the next client sends the request*/
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
         g_queue_inside_cinema.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop(); 
 
@@ -302,7 +300,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
         g_queue_clients_out.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop();
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] No tickets left so I go to my house :(" << RESET << std::endl;
-        g_sem_manager.unlock(); /*Desbloqueo el turno para que el siguiente cliente mande la peticion*/
+        g_sem_manager.unlock(); /*It unlocks the shift to the next client sends the request*/
     }
 }
 
@@ -314,8 +312,6 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
  * 
  ******************************************************/
 void ticketOffice(){
-     
-
     std::cout << GREEN << "[TICKET OFFICE] Ticket office open" << RESET << std::endl; 
 
     while(true){
@@ -332,8 +328,8 @@ void ticketOffice(){
             checkNumTickets(mrt);
 
             std::cout << GREEN << "[TICKET OFFICE] The client " << std::to_string(mrt->id_client) << " has been attended" << RESET << std::endl;
-            g_sem_tickets.unlock(); /*Cuando he atendido al cliente lo desbloqueo para atender a otro*/ 
-
+            g_sem_tickets.unlock(); /*It unlocks to attend other clients*/ 
+            
         }catch(std::exception &e){
             std::cout << GREEN << "[TICKET OFFICE] An error occurred while attending clients..." << RESET << std::endl;
             g_sem_tickets.unlock();
@@ -523,7 +519,7 @@ int main(int argc, char *argv[]){
     std::thread thread_replenisher(replenisher);  
 
     /*Wait threads end*/  
-    thread_payment.join(); 
+    thread_payment.join();
 
     return EXIT_SUCCESS; 
 }
