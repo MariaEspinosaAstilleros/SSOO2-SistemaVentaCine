@@ -75,6 +75,7 @@ std::condition_variable                 g_cv_stock_attended;        /*conditiona
 int                  generateRandomNumber(int lim); 
 void                 signalHandler(int signal); 
 void                 messageWelcome(); 
+void                 showInfo(); 
 void                 blockSem();
 int                  priorityAssignment();
 void                 createClients(); 
@@ -124,16 +125,41 @@ void signalHandler(int signal){
  * 
  ******************************************************/
 void messageWelcome(){
-    std::cout << BOLDCYAN << "*********************************************" << RESET << std::endl;
-    std::cout << BOLDCYAN << "* WELCOME TO SALES SYSTEM ONLINE IN CINEMAS *" << RESET << std::endl; 
-    std::cout << BOLDCYAN << "*********************************************" << RESET << std::endl;
+    std::cout << CURVCYAN << "*********************************************" << RESET << std::endl;
+    std::cout << CURVCYAN << "* WELCOME TO SALES SYSTEM ONLINE IN CINEMAS *" << RESET << std::endl; 
+    std::cout << CURVCYAN << "*********************************************" << RESET << std::endl;
+
+    showInfo(); 
+}
+
+/******************************************************
+ * Function name:    showInfo
+ * Date created:     22/4/2020
+ * Input arguments: 
+ * Purpose:          Show color information
+ * 
+ ******************************************************/
+void showInfo(){
+    std::cout << "COLOR LEGEND: " << std::endl; 
+    std::cout << CYAN << "Manager generates the shifts" << RESET << std::endl; 
+    std::cout << YELLOW << "Clients waits to buy tickets, drinks and popcorn" << RESET << std::endl; 
+    std::cout << GREEN << "Ticket office attends the clients and selling tickets" << RESET << std::endl; 
+    std::cout << BLUE << "Payment system makes payment of ticket office and sale points" << RESET << std::endl; 
+    std::cout << MAGENTA << "Sale points sell drinks and popcorn" << RESET << std::endl; 
+    std::cout << RED << "Replenisher will replenish drinks and popcorn" << RESET << std::endl; 
+    std::cout << "Signal handler ends the program" << std::endl; 
+    std::cout << "" << std::endl; 
+    std::cout << YELLOW << NUM_CLIENTS << RESET << " clients and " << GREEN  << NUM_SEATS << RESET << " seats will be created to simulate the system"  << std::endl; 
+    std::cout << "To end the program press CTRL + C" << std::endl; 
+    std::cout << "To start the program press ENTER" << std::endl; 
+    getchar(); 
 }
 
 /******************************************************
  * Function name:    blockSem
  * Date created:     16/4/2020
  * Input arguments:  
- * Purpose:          Block all semaphores 
+ * Purpose:          Block semaphores 
  * 
  ******************************************************/
 void blockSem(){
@@ -205,17 +231,6 @@ void createSalePoints(){
         g_v_sale_point.push_back(std::thread(salePoint, i)); 
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
-}
-
-/******************************************************
- * Function name:    createThreads
- * Date created:     22/4/2020
- * Input arguments:  
- * Purpose:          Create the threads of system 
- * 
- ******************************************************/
-void createThreads(){
-
 }
 
 /******************************************************
