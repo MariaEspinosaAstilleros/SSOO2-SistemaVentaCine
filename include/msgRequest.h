@@ -48,7 +48,7 @@ class MsgRequestSalePoint{
         int     id_sale_point; 
         bool    attended; 
 
-        MsgRequestSalePoint(int id, int nd, int np, int id_sp); 
+        MsgRequestSalePoint(int id, int nd, int np); 
 };
 
 
@@ -59,13 +59,13 @@ class MsgRequestSalePoint{
  * Purpose:          Class of requests to pay
  *                     
  ******************************************************/
-class MsgRequestPay{
+class MsgRequestPayment{
     public:
         int  id_client;
         int  id_pay; 
         bool attended; 
 
-        MsgRequestPay(int id, int idp); 
+        MsgRequestPayment(int id, int idp); 
 };
 
 
