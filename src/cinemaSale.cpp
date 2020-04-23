@@ -7,7 +7,7 @@
  * 
  * Date created:    2/4/2020
  * 
- * Purpose:         
+ * Purpose:         It simulates a sales system online in cinemas
  * 
  ******************************************************/
 
@@ -28,17 +28,18 @@
 #include "../include/msgRequest.h"
 #include "../include/SemCounter.h"
 
-#define NUM_SEATS   72
-#define NUM_SP      3
-#define NUM_CLIENTS 10
-#define MAX_REQUEST 6
-#define PAY_TO      1 /*pay to ticket office*/
-#define PAY_SP      2 /*pay to sale point*/
+#define NUM_SEATS               72
+#define NUM_SP                  3
+#define NUM_CLIENTS             10
+#define MAX_REQUEST_TICKETS     6
+#define MAX_REQUEST_DRINK_POP   11
+#define PAY_TO                  1 
+#define PAY_SP                  2 
 
 /*Globals variables*/
 int g_payment_priority;
-int g_shift       = 0; 
-int g_num_seats   = NUM_SEATS;
+int g_shift             = 0;
+int g_num_seats         = NUM_SEATS;
 
 /*Messages queue*/
 std::queue<std::thread>                 g_queue_tickets;            /*queue of clients to buy tickets*/
@@ -49,20 +50,28 @@ std::queue<std::thread>                 g_queue_inside_cinema;      /*queue when
 std::queue<MsgRequestTickets*>          g_queue_request_tickets;    /*queue to request tickets*/
 std::queue<MsgRequestSalePoint*>        g_queue_request_pv;         /*queue to request sale point*/
 std::queue<MsgRequestStock*>            g_queue_request_stock;      /*queue to request thread stocker*/
-std::priority_queue<MsgRequestPay*>     g_queue_request_payment;    /*queue to request pay*/
+std::priority_queue<MsgRequestPayment*> g_queue_request_payment;    /*queue to request pay*/
 
 /*Vectors*/
 std::vector<std::thread>                g_v_sale_point;              /*vector with id of sale point*/
+std::vector<std::mutex*>                g_v_sem_sale_point;          /*vector of semaphores for points of sale*/
 
 /*Semaphores*/
+SemCounter                              g_sem_seats(1);             /*sem to control seats*/
+SemCounter                              g_sem_payment(1);           /*sem to control payment*/
+SemCounter                              g_sem_replenisher(1);       /*sem to control thread replenisher*/
+SemCounter                              g_sem_sale_point(0);        /*sem to control food request*/
 std::mutex                              g_sem_tickets;              /*sem to wait tickets*/
 std::mutex                              g_sem_toffice;              /*sem to wake ticket office*/
-SemCounter                              g_sem_seats(1);                /*sem to control seats*/
 std::mutex                              g_sem_manager;              /*sem to manager send a new shift*/
-std::mutex                              g_sem_shift;                 /*sem to control the shift*/
-SemCounter                              g_sem_payment(1);           /*sem to control pay*/
-std::mutex                              g_sem_mutex_payment;        /*sem to control the critical section in pay*/
-std::mutex                              g_sem_wait_payment;         /*sem to control pay confirmation*/
+std::mutex                              g_sem_shift;                /*sem to control the shift*/
+std::mutex                              g_sem_wait_payment;         /*sem to control payment confirmation*/
+std::mutex                              g_sem_wait_sale_point;      /*sem to control sale point confirmation*/
+std::mutex                              g_sem_wait_drinkpop;        /*sem to control drinks and popcorn confirmation*/
+std::mutex                              g_sem_mutex_access_to;      /*sem to control the access to tickets request queue*/
+std::mutex                              g_sem_mutex_access_payment; /*sem to control the access to payment request queue*/
+std::mutex                              g_sem_mutex_access_sp;      /*sem to control the access to sale points request queue*/
+std::mutex*                             g_sem_mutex_sale_point;     /*sem to control sale in sale points*/
 
 /*Condition variable*/
 std::condition_variable                 g_cv_ticket_office;         /*condition variable to notify the shift of ticket office*/
@@ -85,7 +94,7 @@ MsgRequestTickets    buyTickets(int id_client);
 void                 checkTicketsClient(int id_client, MsgRequestTickets mrt);
 void                 ticketOffice();
 void                 checkNumTickets(MsgRequestTickets *mrt);
-void                 checkPayment(MsgRequestPay mrp, MsgRequestTickets *mrt); 
+void                 checkPayment(MsgRequestPayment mrp, MsgRequestTickets *mrt); 
 void                 salePoint(int id_sale_point);
 void                 buyDrinksPopcorn(int id_client);
 void                 replenisher();
@@ -164,8 +173,12 @@ void blockSem(){
     g_sem_tickets.lock();             
     g_sem_toffice.lock();                              
     g_sem_manager.lock();                
-    g_sem_payment.wait();                         
-    g_sem_mutex_payment.lock();        
+    g_sem_payment.wait(); 
+
+    /*for(int i = 0; i < NUM_SP; i++){
+        g_v_sem_sale_point.push_back(g_sem_mutex_sale_point);
+        g_v_sem_sale_point.at(i)->lock(); 
+    }          */                    
 }
 
 /******************************************************
@@ -212,7 +225,7 @@ void createClients(){
 
     for(int i = 1; i <= NUM_CLIENTS; i++){
         g_queue_tickets.push(std::thread(client, i));
-        std::this_thread::sleep_for(std::chrono::milliseconds(300)); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(450)); 
     }
 }
 
@@ -257,12 +270,12 @@ void client(int id_client){
 MsgRequestTickets buyTickets(int id_client){
     /*Wait shift of office ticket*/
     std::unique_lock<std::mutex> ul_shift(g_sem_shift); 
-    g_cv_ticket_office.wait(ul_shift, [id_client]{return g_shift == id_client;}); 
-    std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] It's my shift for buy tickets!" << RESET << std::endl; 
+        g_cv_ticket_office.wait(ul_shift, [id_client]{return g_shift == id_client;}); 
+        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] It's my shift for buy tickets!" << RESET << std::endl; 
     ul_shift.unlock(); 
 
     /*Generate the request to buy a tickets*/
-    MsgRequestTickets mrt(id_client, generateRandomNumber(MAX_REQUEST));
+    MsgRequestTickets mrt(id_client, generateRandomNumber(MAX_REQUEST_TICKETS));
     g_queue_request_tickets.push(&mrt); 
     std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I want " << std::to_string(mrt.num_seats) << " tickets" << RESET << std::endl; 
 
@@ -288,7 +301,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have the tickets already. I go to buy drinks and popcorn..." << RESET << std::endl; 
         g_sem_manager.unlock(); /*It unlocks the shift to the next client sends the request*/
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
         g_queue_inside_cinema.push(std::move(g_queue_tickets.front()));
         g_queue_tickets.pop(); 
 
@@ -305,6 +318,35 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
 }
 
 /******************************************************
+ * Function name:    buyDrinksPopcorn
+ * Date created:     23/4/2020
+ * Input arguments:  
+ * Purpose:          The client sends a request to the sale points to buy drinks and popcorn 
+ * 
+ ******************************************************/
+void buyDrinksPopcorn(int id_client){
+    MsgRequestSalePoint mrsp(id_client, generateRandomNumber(MAX_REQUEST_DRINK_POP), generateRandomNumber(MAX_REQUEST_DRINK_POP)); 
+    g_queue_request_pv.push(&mrsp); 
+
+    std::unique_lock<std::mutex> ul_wait_sp(g_sem_wait_sale_point); /*bloqueo hasta que le toque a algun punto de venta atender*/
+        g_sem_sale_point.signal(); 
+        int *p_flag_id = &(mrsp.id_sale_point); 
+        g_cv_sale_point.wait(ul_wait_sp, [p_flag_id]{return *p_flag_id != 0; }); /*si es distinto de 0 es porque ya puede atender un punto de venta*/
+        std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I want " << std::to_string(mrsp.num_drinks) << " drinks and ";
+        std::cout << std::to_string(mrsp.num_drinks) << " popocorn" << RESET << std::endl;
+    ul_wait_sp.unlock(); 
+
+    int index = *p_flag_id - 1; 
+    g_v_sem_sale_point.at(index)->unlock; /*desbloqueo el punto de venta que vaya a venderme la bebida y las palomitas*/
+
+    /*Wait confirmation of sale point*/
+    std::unique_lock<std::mutex> ul_wait_drinkpop(g_sem_wait_drinkpop);
+        bool *p_flag_attended = &(mrsp.attended);
+        g_cv_payment.wait(ul_wait_drinkpop, [p_flag_attended] {return *p_flag_attended;}); 
+    ul_wait_drinkpop.unlock(); 
+}
+
+/******************************************************
  * Function name:    ticketOffice
  * Date created:     12/4/2020
  * Input arguments:  
@@ -317,16 +359,16 @@ void ticketOffice(){
     while(true){
         try{
             g_sem_toffice.lock();
-
-            /*Assign payment priority*/
             g_payment_priority = priorityAssignment(PAY_TO); 
         
-            MsgRequestTickets *mrt = g_queue_request_tickets.front(); 
-            g_queue_request_tickets.pop(); 
+            /*Control the access to tickets request queue*/
+            g_sem_mutex_access_to.lock(); 
+                MsgRequestTickets *mrt = g_queue_request_tickets.front(); 
+                g_queue_request_tickets.pop(); 
+            g_sem_mutex_access_to.unlock(); 
 
             /*Check number of tickets*/
             checkNumTickets(mrt);
-
             std::cout << GREEN << "[TICKET OFFICE] The client " << std::to_string(mrt->id_client) << " has been attended" << RESET << std::endl;
             g_sem_tickets.unlock(); /*It unlocks to attend other clients*/ 
             
@@ -350,19 +392,17 @@ void checkNumTickets(MsgRequestTickets *mrt){
         std::cout << GREEN << "[TICKET OFFICE] The client " << mrt->id_client << " has requested " << mrt->num_seats << RESET << std::endl; 
 
         /*Request to payment system*/
-        //MsgRequestPay mrp(mrt->id_client, g_payment_priority);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); /*sleep the thread each time that the client pays tickets*/
-        MsgRequestPay mrp(mrt->id_client, g_payment_priority);
+        MsgRequestPayment mrp(mrt->id_client, g_payment_priority);
         g_queue_request_payment.push(&mrp);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); /*sleep the thread each time that the client pays tickets*/
  
         /*Wait confirmation of payment system*/
         std::unique_lock<std::mutex> ul_wait_payment(g_sem_wait_payment); 
-        /*Seat allocation and payment system simultaneous*/
-        g_sem_payment.signal();  
-        g_sem_seats.signal();
-        bool *p_flag_attended = &(mrp.attended);
-        g_cv_payment.wait(ul_wait_payment, [p_flag_attended] {return *p_flag_attended;}); 
+            /*Seat allocation and payment system simultaneous*/
+            g_sem_payment.signal();  
+            g_sem_seats.signal();
+            bool *p_flag_attended = &(mrp.attended);
+            g_cv_payment.wait(ul_wait_payment, [p_flag_attended] {return *p_flag_attended;}); 
         ul_wait_payment.unlock();
 
         /*Check if the payment was successful*/
@@ -380,7 +420,7 @@ void checkNumTickets(MsgRequestTickets *mrt){
  * Purpose:          Check if the payment was successful 
  * 
  ******************************************************/
-void checkPayment(MsgRequestPay mrp, MsgRequestTickets *mrt){
+void checkPayment(MsgRequestPayment mrp, MsgRequestTickets *mrt){
     if(mrp.attended == true){ 
         /*Updated the number of tickets left*/
         g_sem_seats.wait(); 
@@ -388,35 +428,33 @@ void checkPayment(MsgRequestPay mrp, MsgRequestTickets *mrt){
         mrt->suff_seats  = true; 
         std::cout << GREEN << "[TICKET OFFICE] " << g_num_seats << " tickets left" << RESET << std::endl;
     }else{
-        mrt->suff_seats = false; 
+        mrt->suff_seats  = false; 
     }
 }
 
 /******************************************************
  * Function name:    salePoint
- * Date created:     11/4/2020
+ * Date created:     23/4/2020
  * Input arguments:  
  * Purpose:          Create the sale points 
  * 
  ******************************************************/
 void salePoint(int id_sale_point){
     std::cout << MAGENTA << "[SALE POINT " << std::to_string(id_sale_point) << "] Created" << RESET << std::endl;
+
+    try{
+        while(true){
+            g_sem_sale_point.wait(); 
+        }
+
+    }catch(std::exception &e){
+        std::cout << MAGENTA << "[SALE POINT] An error occurred while attending clients..."<< RESET << std::endl;
+    }
 }
 
 /******************************************************
- * Function name:    salePoint
- * Date created:     11/4/2020
- * Input arguments:  
- * Purpose:          Create the sale points 
- * 
- ******************************************************/
-void buyDrinksPopcorn(int id_client){
-
-}
-
-/******************************************************
- * Function name:    stock
- * Date created:     16/4/2020
+ * Function name:    replenisher
+ * Date created:     24/4/2020
  * Input arguments:  
  * Purpose:          It simulate the replenisher
  * 
@@ -441,8 +479,11 @@ void paymentSystem(){
         try{
             g_sem_payment.wait();
         
-            MsgRequestPay *mrp = g_queue_request_payment.top();  
-            g_queue_request_payment.pop();
+            /*Control the access to payment request queue*/
+            g_sem_mutex_access_payment.lock(); 
+                MsgRequestPayment *mrp = g_queue_request_payment.top();  
+                g_queue_request_payment.pop();
+            g_sem_mutex_access_payment.unlock(); 
 
             switch(mrp->id_pay){
                 case 1:
@@ -502,15 +543,9 @@ int main(int argc, char *argv[]){
     } 
 
     messageWelcome();
-
-    /*Control threads*/
-    std::cout << "The number of CPU threads is " << std::thread::hardware_concurrency() << std::endl;
-
-    /*Block all semaphores*/
     blockSem(); 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    /*Create the threads*/
     std::thread thread_ticket_office(ticketOffice); 
     std::thread thread_payment(paymentSystem);
     createSalePoints();  
@@ -518,7 +553,6 @@ int main(int argc, char *argv[]){
     std::thread thread_manager(manager); 
     std::thread thread_replenisher(replenisher);  
 
-    /*Wait threads end*/  
     thread_payment.join();
 
     return EXIT_SUCCESS; 
