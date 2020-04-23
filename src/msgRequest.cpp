@@ -20,12 +20,13 @@ MsgRequestTickets::MsgRequestTickets(int id, int ns): id_client(id), num_seats(n
 } 
 
 /*Constructor of class of requests to sale point*/
-MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np, int id_sp): id_client(id), num_drinks(nd), num_popcorn(np), id_sale_point(id_sp){
-    this -> attended = false;  
+MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np): id_client(id), num_drinks(nd), num_popcorn(np){
+    this -> id_sale_point = 0;
+    this -> attended      = false;  
 }
 
 /*Constructor of class of requests to pay*/
-MsgRequestPay::MsgRequestPay(int id, int idp): id_client(id), id_pay(idp){
+MsgRequestPayment::MsgRequestPayment(int id, int idp): id_client(id), id_pay(idp){
     this -> attended = false;
 };  
 
