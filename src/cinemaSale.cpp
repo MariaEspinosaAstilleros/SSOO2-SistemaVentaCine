@@ -36,7 +36,6 @@
 #define PAY_SP                  2 
 
 /*Globals variables*/
-int g_payment_priority;
 int g_drinks, g_popcorn;
 int g_index;
 int g_shift             = 0;
@@ -146,11 +145,11 @@ void messageWelcome(){
  * Function name:    showInfo
  * Date created:     22/4/2020
  * Input arguments: 
- * Purpose:          Show color information
+ * Purpose:          Show legend color and information about system
  * 
  ******************************************************/
 void showInfo(){
-    std::cout << "COLOR LEGEND: " << std::endl; 
+    std::cout << UNDERLINE << "COLOR LEGEND:" << RESET << std::endl; 
     std::cout << CYAN << "Manager generates the shifts" << RESET << std::endl; 
     std::cout << YELLOW << "Clients waits to buy tickets, drinks and popcorn" << RESET << std::endl; 
     std::cout << GREEN << "Ticket office attends the clients and selling tickets" << RESET << std::endl; 
@@ -309,7 +308,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
 
         /*The client buys drinks and popcorn*/
         buyDrinksPopcorn(id_client); 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have everything already. I go to see Harry Potter now! :)" << RESET << std::endl;
     }else{
         g_queue_clients_out.push(std::move(g_queue_tickets.front()));
@@ -345,7 +344,6 @@ void buyDrinksPopcorn(int id_client){
     std::unique_lock<std::mutex> ul_wait_drinkpop(g_sem_wait_drinkpop);
         bool *p_flag_attended = &(mrsp.attended);
         g_cv_payment_sp.wait(ul_wait_drinkpop, [p_flag_attended] {return *p_flag_attended;}); 
-    ul_wait_drinkpop.unlock(); 
 }
 
 /******************************************************
@@ -359,9 +357,7 @@ void ticketOffice(){
     std::cout << GREEN << "[TICKET OFFICE] Ticket office open" << RESET << std::endl; 
     while(true){
         try{
-            g_sem_toffice.lock();
-            g_payment_priority = priorityAssignment(PAY_TO); 
-        
+            g_sem_toffice.lock(); 
             /*Control the access to tickets request queue*/
             g_sem_mutex_access_to.lock(); 
                 MsgRequestTickets *mrt = g_queue_request_tickets.front(); 
@@ -392,8 +388,7 @@ void checkNumTickets(MsgRequestTickets *mrt){
     if(g_num_seats >= mrt->num_seats){
         std::cout << GREEN << "[TICKET OFFICE] The client " << mrt->id_client << " has requested " << mrt->num_seats << RESET << std::endl; 
 
-        /*Request to payment system*/
-        MsgRequestPayment mrp(mrt->id_client, g_payment_priority);
+        MsgRequestPayment mrp(mrt->id_client, priorityAssignment(PAY_TO));
         g_queue_request_payment.push(&mrp);
         std::this_thread::sleep_for(std::chrono::milliseconds(100)); /*sleep the thread each time that the client pays tickets*/
  
@@ -459,7 +454,6 @@ void salePoint(int id_sale_point){
             std::this_thread::sleep_for(std::chrono::milliseconds(300)); 
             checkNumDrinksAndPopcorn(g_drinks, g_popcorn, mrsp);  
         }
-
     }catch(std::exception &e){
         std::cout << MAGENTA << "[SALE POINT] An error occurred while attending clients..."<< RESET << std::endl;
     }
@@ -473,7 +467,6 @@ void salePoint(int id_sale_point){
  * 
  ******************************************************/
 void checkNumDrinksAndPopcorn(int g_drinks, int g_popcorn, MsgRequestSalePoint *mrsp){
-    g_index = mrsp->id_sale_point - 1;
     g_v_sem_sale_point.at(g_index)->lock(); 
 
     std::cout << MAGENTA << "[SALE POINT " << std::to_string(mrsp->id_sale_point) << "] The client " << std::to_string(mrsp->id_client) << " is going to be attended" << RESET << std::endl;
@@ -487,14 +480,14 @@ void checkNumDrinksAndPopcorn(int g_drinks, int g_popcorn, MsgRequestSalePoint *
             g_sem_replenisher.signal();  
             bool *p_flag_attended = &(mrs.attended);
             g_cv_stock_attended.wait(ul_wait_replenisher, [p_flag_attended] {return *p_flag_attended;}); 
-        ul_wait_replenisher.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(400));
 
         if(mrs.attended == true){
-            g_drinks  -= mrsp->num_drinks; 
-            g_popcorn -= mrsp->num_popcorn;
+            mrs.num_drinks  -= mrsp->num_drinks; 
+            mrs.num_popcorn -= mrsp->num_popcorn;
             mrsp->attended = true; 
-            std::cout << MAGENTA << "[SALE POINT " << std::to_string(mrsp->id_sale_point) << "] " << mrs.num_drinks << " drinks and " << mrs.num_popcorn << " popcorn left" << RESET << std::endl; 
+            std::cout << MAGENTA << "[SALE POINT " << std::to_string(mrsp->id_sale_point) << "] " << std::to_string(mrs.num_drinks) << " drinks and ";
+            std::cout << std::to_string(mrs.num_popcorn) << " popcorn left" << RESET << std::endl; 
             std::cout << MAGENTA << "[SALE POINT " << std::to_string(mrsp->id_sale_point) << "] I keep serving the client " << std::to_string(mrsp->id_client)<< RESET << std::endl;
         }else{
             mrsp->attended =false; 
@@ -515,8 +508,7 @@ void checkNumDrinksAndPopcorn(int g_drinks, int g_popcorn, MsgRequestSalePoint *
  * 
  ******************************************************/
 void requestPaymentSalePoint(MsgRequestSalePoint *mrsp){
-    g_payment_priority = priorityAssignment(PAY_SP);
-    MsgRequestPayment mrp(mrsp->id_client, g_payment_priority);
+    MsgRequestPayment mrp(mrsp->id_client, priorityAssignment(PAY_SP));
     g_queue_request_payment.push(&mrp); 
 
     std::unique_lock<std::mutex> ul_wait_payment(g_sem_wait_payment); 
@@ -528,9 +520,9 @@ void requestPaymentSalePoint(MsgRequestSalePoint *mrsp){
 
     if(mrp.attended == true){
         mrsp->attended = true;
-        g_cv_payment_sp.notify_one(); 
+        g_cv_payment_sp.notify_all(); 
         std::cout << MAGENTA << "[SALE POINT " << std::to_string(mrsp->id_sale_point) << "] The client " << std::to_string(mrsp->id_client) << " has been attended"<< RESET << std::endl;
-        
+        g_queue_cinema.push(std::move(g_queue_inside_cinema.front()));
     }else{
         mrsp->attended = false;  
     }
