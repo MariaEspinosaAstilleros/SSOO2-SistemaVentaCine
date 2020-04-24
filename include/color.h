@@ -14,3 +14,4 @@
 #define BOLDBLUE    "\033[1m\033[34m"      /*Bold blue*/
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
 #define BOLDMAGENTA "\033[1m\033[35m"      /*Bold magenta*/
+#define UNDERLINE   "\033[4m"              /*Underline white*/
