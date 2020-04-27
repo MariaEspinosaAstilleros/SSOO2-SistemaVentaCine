@@ -21,6 +21,7 @@ MsgRequestTickets::MsgRequestTickets(int id, int ns): id_client(id), num_seats(n
 
 /*Constructor of class of requests to sale point*/
 MsgRequestSalePoint::MsgRequestSalePoint(int id, int nd, int np): id(id), num_drinks(nd), num_popcorn(np){
+    this -> attended = false;
 }
 
 /*Constructor of class of requests to pay*/
