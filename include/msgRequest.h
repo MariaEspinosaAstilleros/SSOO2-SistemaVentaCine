@@ -42,12 +42,9 @@ class MsgRequestTickets{
  ******************************************************/
 class MsgRequestSalePoint{
     public:
-        int     id_client;
+        int     id;
         int     num_drinks;
         int     num_popcorn;
-        int     id_sale_point; 
-        bool    attended; 
-
         MsgRequestSalePoint(int id, int nd, int np); 
 };
 
@@ -62,26 +59,9 @@ class MsgRequestSalePoint{
 class MsgRequestPayment{
     public:
         int  id_client;
-        int  id_pay; 
+        int  type; 
         bool attended; 
 
-        MsgRequestPayment(int id, int idp); 
+        MsgRequestPayment(int id, int t); 
 };
 
-
-/******************************************************
- * Class name:       MsgRequestStock
- * Date created:     3/4/2020
- * Input arguments: 
- * Purpose:          Class of requests to thread stocker
- *                     
- ******************************************************/
-class MsgRequestStock{
-    public:
-        int     num_drinks;
-        int     num_popcorn;
-        int     id_sale_point; 
-        bool    attended;
-        
-        MsgRequestStock(int nd, int np, int id_sp);    
-};
