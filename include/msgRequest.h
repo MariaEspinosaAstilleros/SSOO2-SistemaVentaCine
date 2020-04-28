@@ -45,7 +45,8 @@ class MsgRequestSalePoint{
         int     id;
         int     num_drinks;
         int     num_popcorn;
-        bool attended;
+        int     id_sp_attend; 
+        bool    attended;
         MsgRequestSalePoint(int id, int nd, int np); 
 };
 
