@@ -29,7 +29,7 @@
 
 #define NUM_SEATS               72
 #define NUM_SP                  3
-#define NUM_CLIENTS             20
+#define NUM_CLIENTS             30
 #define MAX_REQUEST_TICKETS     6
 #define MAX_REQUEST_DRINK_POP   10
 #define PAY_TO                  1 
