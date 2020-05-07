@@ -159,7 +159,6 @@ void blockSem(){
  * Date created:     16/4/2020
  * Input arguments:  
  * Purpose:          Assign priority to clients when paying.
- *                   The clients to pay to ticket office has 20% of priority and the clients to pay to sale point has 80% of priority
  * 
  ******************************************************/
 int priorityAssignment(int type_payment){
@@ -245,7 +244,8 @@ MsgRequestTickets buyTickets(int id_client){
  * Function name:    checkTicketsClient
  * Date created:     12/4/2020
  * Input arguments:  
- * Purpose:          Check if there are enough tickets for the client 
+ * Purpose:          Check if there are enough tickets for the client. If the client has paid for the tickets,
+ *                   he will buy drinks and popcorn. If there are not enough tickets the client leaves the cinema.
  * 
  ******************************************************/
 void checkTicketsClient(int id_client, MsgRequestTickets mrt){
@@ -260,7 +260,7 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
 
         /*The client buys drinks and popcorn*/
         buyDrinksPopcorn(id_client); 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(600)); 
         std::cout << YELLOW << "[CLIENT " << std::to_string(id_client) << "] I have everything already. I go to see Harry Potter now! :)" << RESET << std::endl;
     }else{
         g_queue_clients_out.push(std::move(g_queue_tickets.front()));
@@ -274,7 +274,8 @@ void checkTicketsClient(int id_client, MsgRequestTickets mrt){
  * Function name:    ticketOffice
  * Date created:     12/4/2020
  * Input arguments:  
- * Purpose:          It simulate the ticket office  
+ * Purpose:          It simulate the ticket office. The sale point checks if there are enough tickets 
+ *                   for the customer. If there is then give the tickets to the customer and ask for the request for payment. 
  * 
  ******************************************************/
 void ticketOffice(){
@@ -302,7 +303,7 @@ void ticketOffice(){
  * Function name:    checkNumTickets
  * Date created:     22/4/2020
  * Input arguments:  
- * Purpose:          Check tickets
+ * Purpose:          Check tickets  
  * 
  ******************************************************/
 void checkNumTickets(MsgRequestTickets *mrt){
@@ -327,8 +328,8 @@ void checkNumTickets(MsgRequestTickets *mrt){
         /*Check if the payment was successful*/
         checkPaymentTicketOffice(mrp, mrt);
     }else{
-        std::cout << GREEN << "[TICKET OFFICE] The client " << std::to_string(mrt->id_client) << " has requested more tickets than there are left" << RESET << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        std::cout << GREEN << "[TICKET OFFICE] The client " << std::to_string(mrt->id_client) << " has requested more tickets than there are left" << RESET << std::endl;
         mrt->suff_seats = false; 
     }
 }
@@ -387,7 +388,8 @@ void buyDrinksPopcorn(int id_client){
  * Function name:    salePoint
  * Date created:     23/4/2020
  * Input arguments:  
- * Purpose:          Create the sale points 
+ * Purpose:          It simulate the sale point. Check if there are enough stocks for the client. 
+ *                   If there are, the client is given drinks and popcorn and send a request to pay. If there aren't stocks we call the replenisher
  * 
  ******************************************************/
 void salePoint(InfoSalePoint &sp){
@@ -401,10 +403,10 @@ void salePoint(InfoSalePoint &sp){
                 mrsp->id_sp_attend = sp.id;
                 g_cv_drinks_popcorn.notify_all(); 
             g_sem_mutex_access_sp.unlock(); 
-            std::this_thread::sleep_for(std::chrono::milliseconds(200)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
 
             checkNumDrinksPopcorn(mrsp, std::ref(sp));
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
             std::cout << MAGENTA << "[SALE POINT " << sp.id << "] Client " << std::to_string(mrsp->id) << " has been attended" << RESET << std::endl;
             mrsp->attended = true; 
             g_cv_receive_food.notify_all(); 
@@ -416,7 +418,7 @@ void salePoint(InfoSalePoint &sp){
 }
 
 /******************************************************
- * Function name:    checkNumTickets
+ * Function name:    checkNumDrinksPopcorn
  * Date created:     22/4/2020
  * Input arguments:  
  * Purpose:          Check number of drinks and popcorn
@@ -448,7 +450,7 @@ void checkNumDrinksPopcorn(MsgRequestSalePoint *mrsp, InfoSalePoint &sp){
  ******************************************************/
 void requestReplenisher(MsgRequestSalePoint *mrsp, InfoSalePoint &sp){
     /*Send a request to replenisher*/
-    std::cout << GREEN << "[SALE POINT " << sp.id << "] The client " << std::to_string(mrsp->id) << " has requested more drinks and popcorn than there are left" << RESET << std::endl;
+    std::cout << MAGENTA << "[SALE POINT " << sp.id << "] The client " << std::to_string(mrsp->id) << " has requested more drinks and popcorn than there are left" << RESET << std::endl;
     std::cout << MAGENTA << "[SALE POINT " << sp.id << "] I need replenish drinks and popcorn" << RESET << std::endl;
     g_queue_request_stock.push(&sp); 
     g_sem_replenisher.signal(); 
@@ -481,10 +483,11 @@ void checkPaymentSalePoint(MsgRequestSalePoint *mrsp, InfoSalePoint &sp){
 }
 
 /******************************************************
- * Function name:    replenisher
+ * Function name:    replenish
  * Date created:     24/4/2020
  * Input arguments:  
- * Purpose:          It simulate the replenisher
+ * Purpose:          It simulate the replenisher. When he receives a request, 
+ *                   it replenishes the quantity of drink and popcorn that each sale point has
  * 
  ******************************************************/
 void replenish(){
@@ -492,6 +495,7 @@ void replenish(){
     while(true){
         try{   
             g_sem_replenisher.wait(); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
             std::cout << RED << "[REPLENISHER] I have received a request to replenish a sale point" << RESET << std::endl;
 
             InfoSalePoint *sp = g_queue_request_stock.front(); 
@@ -508,7 +512,7 @@ void replenish(){
 }
 
 /******************************************************
- * Function name:    paySystem 
+ * Function name:    paymentSystem 
  * Date created:     13/4/2020
  * Input arguments: 
  * Purpose:          It simulate the pay system
@@ -535,8 +539,6 @@ void paymentSystem(){
                     std::this_thread::sleep_for(std::chrono::milliseconds(300));
                     break;
             }
-
-            //std::cout << BLUE << "[PAYMENT SYSTEM] Payment request received. The client " << std::to_string(mrp->id_client) << " has paid with priority " << mrp->type << RESET << std::endl;
             mrp->attended = true;  
             g_cv_payment.notify_all();
         }catch(std::exception &e){
@@ -601,11 +603,7 @@ int main(int argc, char *argv[]){
     std::thread clients(createClients);
     std::thread thread_manager(manager); 
     std::thread replenisher(replenish);  
-
-    ticket_office.join(); 
-    sale_point1.join(); 
-    sale_point2.join(); 
-    sale_point3.join(); 
+ 
     payment.join();
 
     return EXIT_SUCCESS; 

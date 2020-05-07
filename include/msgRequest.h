@@ -66,4 +66,3 @@ class MsgRequestPayment{
 
         MsgRequestPayment(int id, int t); 
 };
-
